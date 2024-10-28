@@ -1,4 +1,5 @@
-# snowfall: w02
+# ❄️ snowfall-001-wasm-canvas
 
--   [ ] Make into a solid color or starfield or something simple
--   [ ] Bounce off the walls
+An quick experiment in deploying a [Bevy](https://bevyengine.org) application to the web.
+
+See http://localhost:3000/docs/snowfall/demos/wasm-canvas/ for full details.
