@@ -1,15 +1,27 @@
+# --------------------------------------------------------------------------- #
+# CONFIGURATION
+# --------------------------------------------------------------------------- #
+
 PROJ=snowfall-001-wasm-canvas
 
+# --------------------------------------------------------------------------- #
+# ensure
+# --------------------------------------------------------------------------- #
 
-init:
-	rustup target add wasm32-unknown-unknown
-	cargo install wasm-bindgen-cli
-	cargo update -p wasm-bindgen --precise 0.2.95
-	cargo install mprocs
-
+.PHONY: ensure
 ensure:
+	rm -rf __temp .git
+	rustup target add wasm32-unknown-unknown
+	which wasm-bindgen || cargo install wasm-bindgen-cli && \
+		cargo update -p wasm-bindgen --precise 0.2.95
+	which mprocs || cargo install mprocs
 	npm install
 
+# --------------------------------------------------------------------------- #
+# build
+# --------------------------------------------------------------------------- #
+
+.PHONY: build
 build:
 	rm -rf dist && mkdir -p dist
 	cargo build --release --target wasm32-unknown-unknown
@@ -21,6 +33,11 @@ build:
 	cp target/$(PROJ)_bg.wasm dist/
 	echo "$(shell DATE)" > dist/build-timestamp.txt
 
+# --------------------------------------------------------------------------- #
+# dev
+# --------------------------------------------------------------------------- #
+
+.PHONY: dev dev-watch
 dev-watch:
 	npx nodemon \
 		--watch src --watch assets \
@@ -35,6 +52,11 @@ dev: init ensure
 		"make run-server" 
 	-zellij action rename-pane ""
 
+# --------------------------------------------------------------------------- #
+# run
+# --------------------------------------------------------------------------- #
+
+.PHONY: run run-server
 run: build	
 	$(MAKE) run-server
 
@@ -42,15 +64,18 @@ run-server:
 	npx serve --cors --listen 8099 dist
 
 
-clean:
-	git clean -Xdf
+# --------------------------------------------------------------------------- #
+# publish
+# --------------------------------------------------------------------------- #
 
+.PHONY: publish publish-source publish-deploy
 
 publish-source:
 	-gh repo create raiment-studios/$(PROJ) --public
 	rm -rf __temp .git
 	git clone git@github.com:raiment-studios/$(PROJ).git __temp
 	mv __temp/.git .
+	rm -rf __temp
 	git config user.email ridley.grenwood.winters@gmail.com
 	git config user.name "Ridley Winters"
 	git add .
@@ -58,10 +83,20 @@ publish-source:
 	git push
 	rm -rf .git
 
-publish: build
+publish: build publish-source publish-deploy
+
+publish-deploy:
 	@echo "Publishing..."
 	deno install -Arf --global jsr:@deno/deployctl
 	asdf reshim deno
 	cd dist && deployctl \
 		deploy --project=$(PROJ) --prod \
 		https://jsr.io/@std/http/1.0.7/file_server.ts
+
+# --------------------------------------------------------------------------- #
+# clean
+# --------------------------------------------------------------------------- #
+
+.PHONY: clean
+clean:
+	git clean -Xdf
